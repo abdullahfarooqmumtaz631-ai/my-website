@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>OLX Clone - Buy & Sell Near You | Classified Ads Marketplace</title>
+    <!-- SEO Meta Tags -->
+    <meta name="description" content="Buy and sell everything from used cars to mobile phones in your city. Join millions of happy users on OLX Clone - the best classified ads marketplace.">
+    <meta name="keywords" content="olx, classifieds, buy and sell, used cars, mobile phones, furniture, jobs, marketplace">
+    <!-- Tailwind + Fonts + Libraries -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <!-- No external API dependency - fully static demo with interactive mock data & localStorage favorites -->
+    <style>
+        * { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        
+        .ad-card {
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        .ad-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+        }
+        
+        .category-card {
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        .category-card:hover {
+            background: linear-gradient(135deg, #3b82f6, #1e40af);
+            color: white;
+            transform: scale(1.05);
+        }
+        
+        .navbar {
+            background: white;
+            box-shadow: 0 2px 15px rgba(0,0,0,0.08);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        
+        .hero-section {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .footer {
+            background: #1a202c;
+            color: white;
+        }
+        
+        .dropdown {
+            position: relative;
+            display: inline-block;
+        }
+        
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            right: 0;
+            background-color: white;
+            min-width: 200px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            z-index: 1;
+        }
+        
+        .dropdown:hover .dropdown-content {
+            display: block;
+        }
+        
+        .contact-btn {
+            background: transparent;
+            border: 1px solid #e5e7eb;
+            transition: all 0.3s;
+        }
+        
+        .contact-btn:hover {
+            background: #f3f4f6;
+            transform: translateY(-2px);
+        }
+        
+        .ad-image {
+            height: 200px;
+            object-fit: cover;
+            width: 100%;
+        }
+        
+        .skeleton {
+            background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+            background-size: 200% 100%;
+            animation: loading 1.5s infinite;
+            border-radius: 12px;
+        }
+        
+        @keyframes loading {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.5s ease-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* toast message style */
+        .toast-notify {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #1f2937;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 40px;
+            font-size: 14px;
+            z-index: 999;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            transition: opacity 0.3s;
+            opacity: 0;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+
+<!-- Static Toast Container -->
+<div id="toastMsg" class="toast-notify"></div>
+
+<!-- Navigation Bar / Topbar (Static with localStorage based "fake login" demo) -->
+<nav class="navbar">
+    <div class="container mx-auto px-4">
+        <div class="flex justify-between items-center py-3">
+            <!-- Logo -->
+            <a href="#" class="text-2xl font-bold" onclick="resetToHome(); return false;">
+                <i class="fas fa-store text-blue-600"></i>
+                <span class="text-gray-800">OLX</span><span class="text-blue-600">Clone</span>
+            </a>
+            
+            <!-- Search Bar -->
+            <div class="flex-1 max-w-xl mx-6 hidden md:block">
+                <div class="relative">
+                    <input type="text" id="searchInput" placeholder="Search for cars, mobiles, jobs..." 
+                           class="w-full px-4 py-2 pl-10 border border-gray-300 rounded-full focus:outline-none focus:border-blue-500">
+                    <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
+                </div>
+            </div>
+            
+            <!-- Right Menu - Dynamic based on mock user session -->
+            <div class="flex items-center space-x-4" id="navRightMenu">
+                <!-- Will be injected via JS (login/register or user dropdown) -->
+            </div>
+        </div>
+        
+        <!-- Mobile Search Bar -->
+        <div class="md:hidden pb-3">
+            <div class="relative">
+                <input type="text" id="mobileSearchInput" placeholder="Search for cars, mobiles, jobs..." 
+                       class="w-full px-4 py-2 pl-10 border border-gray-300 rounded-full focus:outline-none focus:border-blue-500">
+                <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<!-- Hero Section -->
+<section class="hero-section text-white py-20">
+    <div class="container mx-auto px-4 text-center">
+        <h1 class="text-5xl font-bold mb-4">Buy & Sell Everything</h1>
+        <p class="text-xl mb-8">Find the best deals on used items in your city</p>
+        <div class="flex justify-center gap-4">
+            <a href="#categories" class="bg-white text-purple-600 px-8 py-3 rounded-full font-semibold hover:bg-gray-100 transition">Browse Categories</a>
+            <a href="#" id="postAdHeroBtn" class="border-2 border-white text-white px-8 py-3 rounded-full font-semibold hover:bg-white hover:text-purple-600 transition">Post Free Ad</a>
+        </div>
+    </div>
+</section>
+
+<!-- Categories Section -->
+<section id="categories" class="py-16 bg-gray-50">
+    <div class="container mx-auto px-4">
+        <h2 class="text-3xl font-bold text-center mb-12">Browse by Category</h2>
+        <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
+            <div class="category-card bg-white rounded-xl p-4 text-center shadow-md" onclick="goToCategory('mobiles')"><i class="fas fa-mobile-alt text-4xl text-blue-500 mb-2"></i><p class="font-medium">Mobiles</p><p class="text-xs text-gray-500">1,234 ads</p></div>
+            <div class="category-card bg-white rounded-xl p-4 text-center shadow-md" onclick="goToCategory('cars')"><i class="fas fa-car text-4xl text-green-500 mb-2"></i><p class="font-medium">Cars</p><p class="text-xs text-gray-500">567 ads</p></div>
+            <div class="category-card bg-white rounded-xl p-4 text-center shadow-md" onclick="goToCategory('bikes')"><i class="fas fa-motorcycle text-4xl text-orange-500 mb-2"></i><p class="font-medium">Bikes</p><p class="text-xs text-gray-500">345 ads</p></div>
+            <div class="category-card bg-white rounded-xl p-4 text-center shadow-md" onclick="goToCategory('electronics')"><i class="fas fa-laptop text-4xl text-purple-500 mb-2"></i><p class="font-medium">Electronics</p><p class="text-xs text-gray-500">890 ads</p></div>
+            <div class="category-card bg-white rounded-xl p-4 text-center shadow-md" onclick="goToCategory('furniture')"><i class="fas fa-couch text-4xl text-yellow-500 mb-2"></i><p class="font-medium">Furniture</p><p class="text-xs text-gray-500">432 ads</p></div>
+            <div class="category-card bg-white rounded-xl p-4 text-center shadow-md" onclick="goToCategory('clothing')"><i class="fas fa-tshirt text-4xl text-pink-500 mb-2"></i><p class="font-medium">Clothing</p><p class="text-xs text-gray-500">678 ads</p></div>
+            <div class="category-card bg-white rounded-xl p-4 text-center shadow-md" onclick="goToCategory('books')"><i class="fas fa-book text-4xl text-indigo-500 mb-2"></i><p class="font-medium">Books</p><p class="text-xs text-gray-500">234 ads</p></div>
+            <div class="category-card bg-white rounded-xl p-4 text-center shadow-md" onclick="goToCategory('jobs')"><i class="fas fa-briefcase text-4xl text-red-500 mb-2"></i><p class="font-medium">Jobs</p><p class="text-xs text-gray-500">156 ads</p></div>
+        </div>
+    </div>
+</section>
+
+<!-- Featured Ads Section -->
+<section class="py-16">
+    <div class="container mx-auto px-4">
+        <h2 class="text-3xl font-bold text-center mb-12">⭐ Featured Listings</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6" id="featuredAds"></div>
+    </div>
+</section>
+
+<!-- Recent Ads Section -->
+<section class="py-16 bg-gray-50">
+    <div class="container mx-auto px-4">
+        <h2 class="text-3xl font-bold text-center mb-12">🆕 Recent Listings</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6" id="recentAds"></div>
+    </div>
+</section>
+
+<!-- Stats Section -->
+<section class="py-16 bg-gradient-to-r from-blue-600 to-purple-600 text-white">
+    <div class="container mx-auto px-4">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+            <div><i class="fas fa-users text-5xl mb-3"></i><h3 class="text-4xl font-bold" id="totalUsers">0</h3><p>Happy Users</p></div>
+            <div><i class="fas fa-ad text-5xl mb-3"></i><h3 class="text-4xl font-bold" id="totalAds">0</h3><p>Active Ads</p></div>
+            <div><i class="fas fa-city text-5xl mb-3"></i><h3 class="text-4xl font-bold">50+</h3><p>Cities</p></div>
+            <div><i class="fas fa-handshake text-5xl mb-3"></i><h3 class="text-4xl font-bold">2K+</h3><p>Deals Done</p></div>
+        </div>
+    </div>
+</section>
+
+<!-- Footer -->
+<footer class="footer py-12">
+    <div class="container mx-auto px-4">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+            <div><h3 class="text-xl font-bold mb-4">About OLX Clone</h3><p class="text-gray-400 text-sm">Buy and sell everything from used cars to mobile phones in your city. Join millions of happy users!</p></div>
+            <div><h3 class="text-xl font-bold mb-4">Quick Links</h3><ul class="space-y-2 text-sm text-gray-400"><li><a href="#" onclick="resetToHome();return false;" class="hover:text-white">Home</a></li><li><a href="#" id="contactFooterLink" class="hover:text-white">Contact Us</a></li><li><a href="#" class="hover:text-white">About Us</a></li><li><a href="#" class="hover:text-white">Privacy Policy</a></li></ul></div>
+            <div><h3 class="text-xl font-bold mb-4">Popular Categories</h3><ul class="space-y-2 text-sm text-gray-400"><li><a href="#" onclick="goToCategory('mobiles');return false;">Mobiles</a></li><li><a href="#" onclick="goToCategory('cars');return false;">Cars</a></li><li><a href="#" onclick="goToCategory('electronics');return false;">Electronics</a></li><li><a href="#" onclick="goToCategory('furniture');return false;">Furniture</a></li></ul></div>
+            <div><h3 class="text-xl font-bold mb-4">Follow Us</h3><div class="flex space-x-4"><a href="#" class="text-gray-400 hover:text-white text-2xl"><i class="fab fa-facebook"></i></a><a href="#" class="text-gray-400 hover:text-white text-2xl"><i class="fab fa-twitter"></i></a><a href="#" class="text-gray-400 hover:text-white text-2xl"><i class="fab fa-instagram"></i></a><a href="#" class="text-gray-400 hover:text-white text-2xl"><i class="fab fa-linkedin"></i></a></div><div class="mt-4"><p class="text-gray-400 text-sm">Download our app</p><div class="flex space-x-2 mt-2"><i class="fab fa-apple text-2xl text-gray-400"></i><i class="fab fa-android text-2xl text-gray-400"></i></div></div></div>
+        </div>
+        <div class="border-t border-gray-700 mt-8 pt-8 text-center text-gray-400 text-sm"><p>&copy; 2024 OLX Clone. All rights reserved.</p></div>
+    </div>
+</footer>
+
+<script>
+    // ---------- STATIC DEMO DATA (rich mock ads) ----------
+    const allAds = [
+        { id: 1, title: 'iPhone 14 Pro Max', price: 1099, city: 'New York', category: 'mobiles', featured: true, image: 'https://images.unsplash.com/photo-1678685888221-cda773a3dcdb?w=400&h=200&fit=crop', description: 'Excellent condition, 256GB, deep purple, includes charger.' },
+        { id: 2, title: 'Honda Civic 2022', price: 24999, city: 'Los Angeles', category: 'cars', featured: true, image: 'https://images.unsplash.com/photo-1568605114967-8130f3a045a8?w=400&h=200&fit=crop', description: 'Low mileage, automatic, perfect family car.' },
+        { id: 3, title: 'Gaming Laptop RTX 3060', price: 1200, city: 'Chicago', category: 'electronics', featured: true, image: 'https://images.unsplash.com/photo-1588872657578-7efd1f1555ed?w=400&h=200&fit=crop', description: '16GB RAM, 512GB SSD, RGB keyboard.' },
+        { id: 4, title: 'Modern L-Shaped Sofa', price: 450, city: 'Houston', category: 'furniture', featured: true, image: 'https://images.unsplash.com/photo-1555041469-5f4c4e2d6c0d?w=400&h=200&fit=crop', description: 'Like new, gray color, comfortable.' },
+        { id: 5, title: 'Samsung Galaxy S23 Ultra', price: 899, city: 'Miami', category: 'mobiles', featured: false, image: 'https://images.unsplash.com/photo-1610945265064-0e34e5519bbf?w=400&h=200&fit=crop', description: '5G, 256GB, brand new condition.' },
+        { id: 6, title: 'Yamaha R6 Sports Bike', price: 12999, city: 'Dallas', category: 'bikes', featured: false, image: 'https://images.unsplash.com/photo-1568772585407-9361f9bf3a6b?w=400&h=200&fit=crop', description: 'Fast and furious, well maintained.' },
+        { id: 7, title: 'Designer Men Suit', price: 350, city: 'Boston', category: 'clothing', featured: false, image: 'https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=400&h=200&fit=crop', description: 'Premium fabric, wedding special.' },
+        { id: 8, title: 'Harry Potter Complete Set', price: 120, city: 'Seattle', category: 'books', featured: false, image: 'https://images.unsplash.com/photo-1621351183012-e2f9972dd9bf?w=400&h=200&fit=crop', description: '7 books collection, like new.' }
+    ];
+
+    // mock session management: "loggedIn" + user name
+    let loggedInUser = null;   // { id: 1, name: "John Doe" }
+    // Load session from localStorage for demo persistence (refresh keeps "login")
+    function loadSession() {
+        const saved = localStorage.getItem('olx_user_session');
+        if (saved) {
+            try {
+                loggedInUser = JSON.parse(saved);
+                updateNavBar();
+            } catch(e) { loggedInUser = null; }
+        } else {
+            loggedInUser = null;
+            updateNavBar();
+        }
+    }
+
+    function updateNavBar() {
+        const container = $('#navRightMenu');
+        if (loggedInUser) {
+            container.html(`
+                <a href="#" id="postAdStaticBtn" class="bg-blue-600 text-white px-5 py-2 rounded-full hover:bg-blue-700 transition"><i class="fas fa-plus"></i> <span class="hidden md:inline">Sell</span></a>
+                <div class="dropdown">
+                    <button class="flex items-center space-x-2 focus:outline-none">
+                        <i class="fas fa-user-circle text-3xl text-gray-600"></i>
+                        <span class="hidden md:inline text-gray-700">${escapeHtml(loggedInUser.name)}</span>
+                        <i class="fas fa-chevron-down text-gray-500 text-sm"></i>
+                    </button>
+                    <div class="dropdown-content">
+                        <a href="#" class="block px-4 py-2 hover:bg-gray-100" onclick="showProfile(); return false;"><i class="fas fa-user mr-2"></i> Profile</a>
+                        <a href="#" class="block px-4 py-2 hover:bg-gray-100" onclick="showMyAds(); return false;"><i class="fas fa-list mr-2"></i> My Ads</a>
+                        <a href="#" class="block px-4 py-2 hover:bg-gray-100" onclick="showFavorites(); return false;"><i class="fas fa-heart mr-2"></i> Favorites</a>
+                        <a href="#" class="block px-4 py-2 hover:bg-gray-100" onclick="showMessages(); return false;"><i class="fas fa-envelope mr-2"></i> Messages</a>
+                        <hr>
+                        <a href="#" class="block px-4 py-2 text-red-600 hover:bg-gray-100" onclick="logoutUser(); return false;"><i class="fas fa-sign-out-alt mr-2"></i> Logout</a>
+                    </div>
+                </div>
+            `);
+        } else {
+            container.html(`
+                <a href="#" id="contactTopLink" class="contact-btn px-4 py-2 rounded-full flex items-center gap-2 text-gray-700 hover:text-blue-600"><i class="fas fa-envelope"></i><span class="hidden md:inline">Contact</span></a>
+                <a href="#" class="bg-blue-600 text-white px-5 py-2 rounded-full hover:bg-blue-700 transition"><i class="fas fa-plus"></i> <span class="hidden md:inline">Sell</span></a>
+                <a href="#" id="loginNavBtn" class="text-gray-700 hover:text-blue-600">Login</a>
+                <a href="#" id="registerNavBtn" class="bg-green-600 text-white px-4 py-2 rounded-full hover:bg-green-700 transition">Register</a>
+            `);
+        }
+        // attach events for non-login actions
+        if (!loggedInUser) {
+            $('#loginNavBtn').off('click').on('click', function(e) { e.preventDefault(); showLoginModal(); });
+            $('#registerNavBtn').off('click').on('click', function(e) { e.preventDefault(); showRegisterModal(); });
+            $('#contactTopLink').off('click').on('click', function(e) { e.preventDefault(); showContactPage(); });
+        }
+        // post ad button (sell / post free ad)
+        $('#postAdStaticBtn, #postAdHeroBtn').off('click').on('click', function(e) {
+            e.preventDefault();
+            if (!loggedInUser) { showToast("Please login to post an ad", 2000); showLoginModal(); }
+            else { showToast("Demo: Ad posting form would open (simulated)", 1500); }
+        });
+    }
+
+    function logoutUser() {
+        localStorage.removeItem('olx_user_session');
+        loggedInUser = null;
+        updateNavBar();
+        showToast("Logged out successfully", 1500);
+        renderAllAds(); 
+    }
+
+    function showLoginModal() {
+        let name = prompt("Demo Login: Enter your name (simple demo)");
+        if (name && name.trim()) {
+            loggedInUser = { id: Date.now(), name: name.trim() };
+            localStorage.setItem('olx_user_session', JSON.stringify(loggedInUser));
+            updateNavBar();
+            showToast(`Welcome ${loggedInUser.name}`, 1500);
+            renderAllAds();
+        }
+    }
+
+    function showRegisterModal() {
+        let name = prompt("Demo Register: Enter your name to create account");
+        if (name && name.trim()) {
+            loggedInUser = { id: Date.now(), name: name.trim() };
+            localStorage.setItem('olx_user_session', JSON.stringify(loggedInUser));
+            updateNavBar();
+            showToast(`Account created! Welcome ${loggedInUser.name}`, 1500);
+            renderAllAds();
+        }
+    }
+
+    function showProfile() { showToast("Profile page (Demo) - User: " + loggedInUser?.name, 1500); }
+    function showMyAds() { showToast("My Ads: You posted 0 ads (demo feature)", 1500); }
+    function showFavorites() { 
+        let favs = JSON.parse(localStorage.getItem('olx_favorites') || '[]');
+        if(favs.length) showToast(`❤️ Favorites: ${favs.join(', ')}`, 2000);
+        else showToast("No favorites yet. Click heart icon on ads!", 1500);
+    }
+    function showMessages() { showToast("Messaging center - demo conversation", 1500); }
+    function showContactPage() { showToast("📞 Contact us: support@olxclone.com | +1 234 567 890", 3000); }
+
+    function showToast(msg, duration=2000) {
+        let toast = $('#toastMsg');
+        toast.text(msg).css('opacity', '1');
+        setTimeout(() => toast.css('opacity', '0'), duration);
+    }
+
+    // render ads helpers
+    function renderAds(adsArray, containerId) {
+        let html = '';
+        adsArray.forEach(ad => {
+            const favList = JSON.parse(localStorage.getItem('olx_favorites') || '[]');
+            const isFav = favList.includes(ad.id);
+            html += `
+                <div class="ad-card bg-white rounded-xl shadow-lg overflow-hidden fade-in" onclick="viewAd(${ad.id})">
+                    <img src="${ad.image}" alt="${ad.title}" class="ad-image w-full" onerror="this.src='https://images.unsplash.com/photo-1678685888221-cda773a3dcdb?w=400&h=200&fit=crop'">
+                    <div class="p-4">
+                        <div class="text-2xl font-bold text-blue-600">PKR ${ad.price.toLocaleString()}</div>
+                        <h3 class="font-bold text-lg mt-1">${escapeHtml(ad.title)}</h3>
+                        <p class="text-gray-500 text-sm mt-1">${escapeHtml(ad.description.substring(0, 60))}...</p>
+                        <div class="flex items-center justify-between mt-3">
+                            <span class="text-sm text-gray-500"><i class="fas fa-map-marker-alt text-red-500"></i> ${escapeHtml(ad.city)}</span>
+                            <div class="flex items-center gap-2">
+                                <span class="text-green-500 text-sm"><i class="fas fa-check-circle"></i> Verified</span>
+                                <i class="fa-${isFav ? 'solid' : 'regular'} fa-heart text-red-500 cursor-pointer hover:scale-110 transition" onclick="event.stopPropagation(); toggleFavorite(${ad.id})"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        $(containerId).html(html);
+    }
+
+    function toggleFavorite(adId) {
+        let favs = JSON.parse(localStorage.getItem('olx_favorites') || '[]');
+        if(favs.includes(adId)) {
+            favs = favs.filter(id => id !== adId);
+            showToast("Removed from favorites", 1000);
+        } else {
+            favs.push(adId);
+            showToast("Added to favorites ❤️", 1000);
+        }
+        localStorage.setItem('olx_favorites', JSON.stringify(favs));
+        renderAllAds(); // re-render both sections to reflect heart icons
+    }
+
+    function renderAllAds() {
+        const featured = allAds.filter(ad => ad.featured === true);
+        const recent = allAds.filter(ad => ad.featured === false);
+        renderAds(featured, '#featuredAds');
+        renderAds(recent, '#recentAds');
+    }
+
+    // category filter simulation
+    function goToCategory(category) {
+        const filtered = allAds.filter(ad => ad.category === category);
+        if(filtered.length === 0) showToast(`No ads found in ${category} category`, 1500);
+        else {
+            let msg = `${category.toUpperCase()}: ${filtered.length} listing(s) - ` + filtered.map(a=>a.title).join(', ');
+            showToast(msg, 2500);
+        }
+    }
+
+    function viewAd(id) {
+        const ad = allAds.find(a => a.id === id);
+        if(ad) {
+            showToast(`📱 ${ad.title} - Price: PKR ${ad.price.toLocaleString()} | Seller: Demo contact #123456`, 3000);
+        } else showToast("Ad not found", 1000);
+    }
+
+    function resetToHome() {
+        renderAllAds();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        showToast("Welcome back to OLX Clone", 1500);
+    }
+
+    function searchQuery() {
+        let query = $('#searchInput').val() || $('#mobileSearchInput').val();
+        if(query.trim() === "") { renderAllAds(); return; }
+        const filtered = allAds.filter(ad => ad.title.toLowerCase().includes(query.toLowerCase()) || ad.description.toLowerCase().includes(query.toLowerCase()) || ad.category.includes(query.toLowerCase()));
+        if(filtered.length) {
+            renderAds(filtered, '#featuredAds');
+            $('#recentAds').html('<div class="col-span-4 text-center py-10 text-gray-500">Search results shown above</div>');
+        } else {
+            renderAds([], '#featuredAds');
+            $('#recentAds').html('<div class="col-span-4 text-center py-10 text-gray-500">No matching ads found</div>');
+        }
+    }
+
+    function loadStats() {
+        $('#totalUsers').text('12,345');
+        $('#totalAds').text(allAds.length + 124);
+    }
+
+    $(document).ready(function() {
+        loadSession();
+        renderAllAds();
+        loadStats();
+        // search handlers
+        $('#searchInput, #mobileSearchInput').on('keypress', function(e) {
+            if(e.which === 13) searchQuery();
+        });
+        $('#contactFooterLink').on('click', function(e){ e.preventDefault(); showContactPage(); });
+        $('#postAdHeroBtn').on('click', function(e){ e.preventDefault(); if(!loggedInUser){ showLoginModal(); } else { showToast("Demo: Post ad form would open", 1500); } });
+    });
+
+    function escapeHtml(str) { if(!str) return ''; return str.replace(/[&<>]/g, function(m){ if(m === '&') return '&amp;'; if(m === '<') return '&lt;'; if(m === '>') return '&gt;'; return m;}); }
+    window.goToCategory = goToCategory; window.viewAd = viewAd; window.resetToHome = resetToHome; window.toggleFavorite = toggleFavorite;
+</script>
+</body>
+</html>
